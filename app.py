@@ -1,5 +1,7 @@
 from flask import Flask, jsonify, render_template
 from binance.client import Client
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import logging
 
