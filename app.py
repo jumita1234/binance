@@ -1,29 +1,44 @@
-from flask import Flask, render_template
+from flask import Flask, jsonify
 from binance.client import Client
+import os
+import logging
 
 app = Flask(__name__)
 
-API_KEY = '8Laqqio8vD7ZIX8MwEQPninU3X4lZrKIKjgUatY2sfpBrTY92ld6dlFCQpv6LbOp'
-API_SECRET = 'aVE4lDtcEf0ejYVI5vV9qQ10qz78cPlaQvp9GxZzc6VSc7Q5U3tkfvDfrxdWTxpV'
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
 
+# Cargar claves desde variables de entorno
+API_KEY = os.getenv("API_KEY")
+API_SECRET = os.getenv("API_SECRET")
+
+if not API_KEY or not API_SECRET:
+    raise Exception("API_KEY o API_SECRET no están definidos en el entorno")
+
+# Inicializar cliente Binance
 client = Client(API_KEY, API_SECRET)
 
 @app.route('/')
-def balance():
-    info = client.get_account()
-    balances = [
-        {
-            'asset': b['asset'],
-            'free': float(b['free']),
-            'locked': float(b['locked'])
-        }
-        for b in info['balances'] if float(b['free']) > 0 or float(b['locked']) > 0
-    ]
-    return render_template('balance.html', balances=balances)
+def home():
+    return jsonify({"status": "ok", "message": "API Binance personal funcionando"})
+
+@app.route('/balance')
+def get_balance():
+    try:
+        account_info = client.get_account()
+        balances = [
+            {
+                'asset': b['asset'],
+                'free': float(b['free']),
+                'locked': float(b['locked'])
+            }
+            for b in account_info['balances']
+            if float(b['free']) > 0 or float(b['locked']) > 0
+        ]
+        return jsonify(balances)
+    except Exception as e:
+        logging.exception("Error al obtener el balance")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run()
-
-import os
-API_KEY = os.environ.get('API_KEY')
-API_SECRET = os.environ.get('API_SECRET')
+    app.run(host='0.0.0.0', port=5000)
