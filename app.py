@@ -24,20 +24,63 @@ client = Client(API_KEY, API_SECRET)
 def home():
     return render_template("index.html")
 
-@app.route('/balance')
-def get_balance():
+@app.route('/balances')
+def balances():
+    data = get_all_balances()
+    return jsonify(data)
+    
+def get_all_balances():
+    balances = {}
+
+    # Saldo Spot
+    spot = client.get_account()
+    balances['spot'] = [
+        {
+            'asset': b['asset'],
+            'free': float(b['free']),
+            'locked': float(b['locked'])
+        }
+        for b in spot['balances']
+        if float(b['free']) > 0 or float(b['locked']) > 0
+    ]
+
+    # Saldo Futuros
     try:
-        account_info = client.get_account()
-        balances = [
+        futures = client.futures_account_balance()
+        balances['futures'] = [
+            {
+                'asset': b['asset'],
+                'balance': float(b['balance']),
+                'availableBalance': float(b['availableBalance'])
+            }
+            for b in futures
+            if float(b['balance']) > 0
+        ]
+    except Exception as e:
+        balances['futures'] = []
+        print(f"Error al obtener saldo de Futuros: {e}")
+
+    # Saldo Margen
+    try:
+        margin = client.get_margin_account()
+        balances['margin'] = [
             {
                 'asset': b['asset'],
                 'free': float(b['free']),
-                'locked': float(b['locked'])
+                'locked': float(b['locked']),
+                'borrowed': float(b['borrowed']),
+                'interest': float(b['interest'])
             }
-            for b in account_info['balances']
+            for b in margin['userAssets']
             if float(b['free']) > 0 or float(b['locked']) > 0
         ]
-        return jsonify(balances)
+    except Exception as e:
+        balances['margin'] = []
+        print(f"Error al obtener saldo de Margen: {e}")
+
+    return balances
+
+
     except Exception as e:
         logging.exception("Error al obtener el balance")
         return jsonify({"error": str(e)}), 500
