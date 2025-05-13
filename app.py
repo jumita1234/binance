@@ -1,34 +1,27 @@
 from flask import Flask, jsonify, render_template
 from binance.client import Client
 from dotenv import load_dotenv
-load_dotenv()
 import os
 import logging
+
+# Cargar variables de entorno
+load_dotenv()
 
 app = Flask(__name__)
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 
-# Cargar claves desde variables de entorno
+# Obtener claves API desde variables de entorno
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 
 if not API_KEY or not API_SECRET:
     raise Exception("API_KEY o API_SECRET no están definidos en el entorno")
 
-# Inicializar cliente Binance
+# Inicializar cliente de Binance
 client = Client(API_KEY, API_SECRET)
 
-@app.route('/')
-def home():
-    return render_template("index.html")
-
-@app.route('/balances')
-def balances():
-    data = get_all_balances()
-    return jsonify(data)
-    
 def get_all_balances():
     balances = {}
 
@@ -58,7 +51,7 @@ def get_all_balances():
         ]
     except Exception as e:
         balances['futures'] = []
-        print(f"Error al obtener saldo de Futuros: {e}")
+        logging.exception("Error al obtener saldo de Futuros")
 
     # Saldo Margen
     try:
@@ -76,11 +69,19 @@ def get_all_balances():
         ]
     except Exception as e:
         balances['margin'] = []
-        print(f"Error al obtener saldo de Margen: {e}")
+        logging.exception("Error al obtener saldo de Margen")
 
     return balances
 
+@app.route('/')
+def home():
+    return render_template("index.html")
 
+@app.route('/balances')
+def balances():
+    try:
+        data = get_all_balances()
+        return jsonify(data)
     except Exception as e:
         logging.exception("Error al obtener el balance")
         return jsonify({"error": str(e)}), 500
