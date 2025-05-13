@@ -1,4 +1,5 @@
 from flask import Flask, jsonify
+from flask import render_template
 from binance.client import Client
 import os
 import logging
@@ -20,7 +21,7 @@ client = Client(API_KEY, API_SECRET)
 
 @app.route('/')
 def home():
-    return jsonify({"status": "ok", "message": "API Binance personal funcionando"})
+    return render_template("index.html")
 
 @app.route('/balance')
 def get_balance():
